@@ -15,7 +15,6 @@ def main(CheckEmployeesUpdate: list) -> list:
     Returns:
         dict: [employees]
     """
-    
 
     main_df = pd.DataFrame(CheckEmployeesUpdate[0])
     sub_df = pd.DataFrame([flatten(employee) for employee in CheckEmployeesUpdate[1]])
@@ -36,15 +35,15 @@ def main(CheckEmployeesUpdate: list) -> list:
             "customVariables_0_name",
             "customVariables_1_name",
         ],
-        inplace=True
+        inplace=True,
     )
 
     sub_df.rename(
         columns={
             "customVariables_0_value": "Branch #",
-            "customVariables_1_value": "Branch Name"
+            "customVariables_1_value": "Branch Name",
         },
-        inplace=True
+        inplace=True,
     )
 
     sub_df = sub_df.merge(main_df, on="clientEmployeeId1", how="right")
@@ -62,9 +61,9 @@ def main(CheckEmployeesUpdate: list) -> list:
             "startDate_y",
             "endDate_y",
             "Branch #_y",
-            "Branch Name_y"
+            "Branch Name_y",
         ],
-        inplace=True
+        inplace=True,
     )
 
     sub_df.rename(
@@ -80,24 +79,41 @@ def main(CheckEmployeesUpdate: list) -> list:
             "startDate_x": "startDate",
             "endDate_x": "endDate",
             "Branch #_x": "Branch #",
-            "Branch Name_x": "Branch Name"
+            "Branch Name_x": "Branch Name",
         },
-        inplace=True
+        inplace=True,
     )
 
+    file_path = r"C:\Users\zzbinden\OneDrive - CoHo Distributing LLC\Shared Documents - IT Data Team\Integrations\Business Units\Motus\data\main_df.csv"
+    main_df.to_csv(file_path)
+    file_path = r"C:\Users\zzbinden\OneDrive - CoHo Distributing LLC\Shared Documents - IT Data Team\Integrations\Business Units\Motus\data\sub_df.csv"
+    sub_df.to_csv(file_path)
+
+    sub_df["programId"] = sub_df["programId"].astype(int)
+    main_df["programId"] = main_df["programId"].astype(int)
 
     rows_to_update = []
     for column in main_df.columns:
-        if column != "programId":
+        if column == "email":
+            sub_df["email"] = sub_df["email"].str.lower().str.split(";")
+            main_df["email"] = main_df["email"].str.lower()
+            different_emails = main_df["email"].apply(
+                lambda email: any(email in sub_df_row for sub_df_row in sub_df["email"])
+            )
+            update_index = [
+                index for index, value in enumerate(different_emails) if value is False
+            ]
+        else:
             different_values = main_df[column].isin(sub_df[column])
-            update_index = [index for index, value in enumerate(different_values) if value is False]
-            rows_to_update.extend(update_index)
+            update_index = [
+                index for index, value in enumerate(different_values) if value is False
+            ]
+        rows_to_update.extend(update_index)
 
     distinct_rows = list(set(rows_to_update))
 
     different_rows = main_df.iloc[distinct_rows]
 
-
-
     return different_rows.to_dict("records")
+
     
